@@ -18,8 +18,7 @@ services:
     plan: free
     region: oregon
     branch: main
-    buildCommand: npm install --include=dev && npx prisma generate && npx prisma db push --accept-data-loss && npm run build
-    startCommand: npm run start
+    buildCommand: npm install --include=dev && npx prisma generate && npx prisma db push --accept-data-loss && npm run build    startCommand: npm run start
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
