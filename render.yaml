@@ -1,0 +1,45 @@
+# Render Blueprint — deploys the web service + a managed Postgres database.
+# How to use:
+#   1. Push this repo to GitHub.
+#   2. In Render, click "New +" > "Blueprint" and select this repo.
+#   3. Render reads this file and provisions everything.
+#   4. Fill in the marked secrets when prompted.
+
+databases:
+  - name: webhooks-db
+    plan: free
+    databaseName: webhooks
+    user: webhooks
+
+services:
+  - type: web
+    name: webhook-receiver
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm ci && npx prisma generate && npx prisma db push --accept-data-loss && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: webhooks-db
+          property: connectionString
+      - key: ALLOWED_SOURCES
+        value: "generic,stripe,github"
+      - key: GENERIC_SECRET
+        generateValue: true
+      - key: STRIPE_SECRET
+        sync: false
+      - key: GITHUB_SECRET
+        sync: false
+      - key: DASHBOARD_TOKEN
+        generateValue: true
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "120"
+      - key: LOG_LEVEL
+        value: "info"

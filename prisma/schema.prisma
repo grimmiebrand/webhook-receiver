@@ -1,0 +1,53 @@
+// Webhook receiver schema
+// Run: npx prisma migrate dev (local) / prisma migrate deploy (prod)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  RECEIVED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REJECTED
+}
+
+model WebhookEvent {
+  id           String      @id @default(cuid())
+  source       String
+  eventType    String?
+  externalId   String?     // dedupe key supplied by sender (e.g. Stripe event id)
+  status       EventStatus @default(RECEIVED)
+  payload      Json
+  headers      Json
+  signature    String?
+  signatureOk  Boolean     @default(false)
+  errorMessage String?
+  ipAddress    String?
+  receivedAt   DateTime    @default(now())
+  processedAt  DateTime?
+  attempts     DeliveryAttempt[]
+
+  @@index([source, receivedAt])
+  @@index([status, receivedAt])
+  @@unique([source, externalId])
+}
+
+model DeliveryAttempt {
+  id           String       @id @default(cuid())
+  eventId      String
+  event        WebhookEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  attemptNo    Int
+  success      Boolean
+  durationMs   Int
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+
+  @@index([eventId, attemptNo])
+}
